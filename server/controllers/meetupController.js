@@ -71,6 +71,42 @@ exports.postNewMeetup = function(req, res) {
   RSVP to a specific meetup
 */
 exports.postRsvpMeetup = function(req, res) {
+  var { userId, meetupId } = req.body;
+  database.ref("users").child(userId).once("value", function(userSnapshot) {
+    if (userSnapshot.exists()) {
+      database.ref("meetups").child(meetupId).once("value", function(snapshot) {
+        if (snapshot.exists()) {
+          if (snapshot.hasChild("usersAttending")) {
+            database.ref("meetups").child(meetupId + "/usersAttending").update({
+              userId: true
+            }, function(error) {
+              if (error) {
+                res.status(500).send({ error: "Internal server error: Could not RSVP to meetup." });
+              } else {
+                res.status(200).send({ message: "success" });
+              }
+            });
+          } else {
+            database.ref("meetups").child(meetupId).update({
+              "usersAttending": {
+                userId: true
+              }
+            }, function(error) {
+              if (error) {
+                res.status(500).send({ error: "Internal server error: Could not RSVP to meetup." });
+              } else {
+                res.status(200).send({ message: "success" });
+              }
+            });
+          }
+        } else {
+          res.status(400).send({ error: "Meetup does not exist." });
+        }
+      });
+    } else {
+      res.status(400).send({ error: "User does not exist." });
+    }
+  });
 }
 
 /**
