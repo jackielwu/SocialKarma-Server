@@ -1,4 +1,6 @@
 var path = require('path');
+var firebase = require('../config/fire');
+var database = firebase.database();
 
 /* GET */
 
