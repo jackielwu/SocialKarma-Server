@@ -112,9 +112,54 @@ exports.postRsvpMeetup = function(req, res) {
 /**
   Add a reaction to a specific meetup
 
-  Reaction can either be up vote or down vote
+  Reaction can either be up vote or down vote or neutral
+  reaction:
+    1: upvote
+    0: neutral
+    -1: downvote
 */
 exports.postMeetupReaction = function(req, res) {
+  var { userId, meetupId, reaction } = req.body;
+  database.ref("users").child(userId).once("value").then(function(userSnapshot) {
+    if (userSnapshot.exists()) {
+      database.ref("meetups").child(meetupId).once("value").then(function(snapshot) {
+        if (snapshot.exists()) {
+          database.ref("meetups").child(meetupId).update({
+            "votes" : snapshot.val().votes + reaction
+          }, function(error) {
+            if (error) {
+              res.status(500).send({ error: "Could not create reaction for meetup." });
+            } else {
+              const userReactionKey = "reactions/meetups/" + meetupId;
+              if (reaction != 0) {
+                database.ref("users/" + userId).update({
+                  userReactionKey: reaction
+                }, function(error) {
+                  if (error) {
+                    res.status(500).send({ error: "Could not create reaction for meetup." });
+                  } else {
+                    res.status(200).send({ message: "success" });
+                  }
+                });
+              } else {
+                database.ref("users").child(userId + "/" + userReactionKey).remove(function(error) {
+                  if (error) {
+                    res.status(500).send({ error: "Could not create reaction for meetup." });
+                  } else {
+                    res.status(200).send({ message: "success" });
+                  }
+                });
+              }
+            }
+          });
+        } else {
+          res.status(400).send({ error: "Meetup does not exist." });
+        }
+      });
+    } else {
+      res.status(400).send({ error: "User does not exist." });
+    }
+  });
 }
 
 /**
