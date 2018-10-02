@@ -77,9 +77,9 @@ exports.postRsvpMeetup = function(req, res) {
       database.ref("meetups").child(meetupId).once("value", function(snapshot) {
         if (snapshot.exists()) {
           if (snapshot.hasChild("usersAttending")) {
-            database.ref("meetups").child(meetupId + "/usersAttending").update({
-              userId: true
-            }, function(error) {
+            var userAttending = {};
+            userAttending[userId] = true;
+            database.ref("meetups").child(meetupId + "/usersAttending").update(userAttending, function(error) {
               if (error) {
                 res.status(500).send({ error: "Internal server error: Could not RSVP to meetup." });
               } else {
@@ -87,11 +87,9 @@ exports.postRsvpMeetup = function(req, res) {
               }
             });
           } else {
-            database.ref("meetups").child(meetupId).update({
-              "usersAttending": {
-                userId: true
-              }
-            }, function(error) {
+            var userAttending = { "usersAttending": {} };
+            userAttending["usersAttending"][userId] = true;
+            database.ref("meetups").child(meetupId).update(userAttending, function(error) {
               if (error) {
                 res.status(500).send({ error: "Internal server error: Could not RSVP to meetup." });
               } else {
@@ -132,11 +130,11 @@ exports.postMeetupReaction = function(req, res) {
             } else {
               const userReactionKey = "reactions/meetups/" + meetupId;
               if (reaction != 0) {
-                database.ref("users/" + userId).update({
-                  userReactionKey: reaction
-                }, function(error) {
+                var userReaction = {};
+                userReaction[userReactionKey] = reaction;
+                database.ref("users/" + userId).update(userReaction, function(error) {
                   if (error) {
-                    res.status(500).send({ error: "Could not create reaction for meetup." });
+                    res.status(500).send({ error: "Internal server error: Could not create reaction for meetup." });
                   } else {
                     res.status(200).send({ message: "success" });
                   }
@@ -144,7 +142,7 @@ exports.postMeetupReaction = function(req, res) {
               } else {
                 database.ref("users").child(userId + "/" + userReactionKey).remove(function(error) {
                   if (error) {
-                    res.status(500).send({ error: "Could not create reaction for meetup." });
+                    res.status(500).send({ error: "Internal server error: Could not create reaction for meetup." });
                   } else {
                     res.status(200).send({ message: "success" });
                   }
@@ -166,12 +164,54 @@ exports.postMeetupReaction = function(req, res) {
   Add a new comment to a specific meetup
 */
 exports.postMeetupComment = function(req, res) {
+  var { userId, meetupId, comment } = req.body;
+  let timestamp = Math.floor(Date.now() / 1000);
+  database.ref("users").child(userId).once("value").then(function(userSnapshot) {
+    if (userSnapshot.exists()) {
+      database.ref("meetups").child(meetupId).once("value").then(function(snapshot) {
+        if (snapshot.exists()) {
+          var meetupCommentRef = database.ref("meetupComments").push();
+          var meetupCommentKey = meetupCommentRef.key;
+          let commentsKey = "comments/" + meetupCommentKey;
+          meetupCommentRef.set({
+            "author": userId,
+            "meetup": meetupId,
+            "comment": comment,
+            "timestamp": timestamp,
+            "votes": 0
+          }, function(error) {
+            if (error) {
+              res.status(500).send({ error: "Internal server error: Comment could not be created for meetup." });
+            } else {
+              var newComment = {};
+              newComment[commentsKey] = true;
+              database.ref("meetups").child(meetupId).update(newComment, function(error) {
+                if (error) {
+                  res.status(500).send({ error: "Internal server error: Comment could not be created for meetup." });
+                } else {
+                  res.status(200).send({ message: "success" });
+                }
+              });
+            }
+          });
+        } else {
+          res.status(400).send({ error: "Meetup does not exist." });
+        }
+      });
+    } else {
+      res.status(400).send({ error: "User does not exist." });
+    }
+  });
 }
 
 /**
   Add a reaction to a comment for a specific meetup
 
-  Reaction can either be up vote or down vote
+  Reaction can either be up vote or down vote or neutral
+  reaction:
+    1: upvote
+    0: neutral
+    -1: downvote
 */
 exports.postMeetupCommentReaction = function(req, res) {
 }
