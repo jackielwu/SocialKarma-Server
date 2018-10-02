@@ -1,6 +1,7 @@
 var express = require('express');
 
 module.exports = function(app) {
+  /* Controllers */
   var mainController = require('../controllers/mainController');
   var meetupController = require('../controllers/meetupController');
 
@@ -8,9 +9,11 @@ module.exports = function(app) {
   app.get('/', mainController.getMain);
 
   /* Meetup endpoints */
+  // GET
   app.get('/meetups', meetupController.getMeetups);
   app.get('/meetup', meetupController.getMeetupDetail);
   app.get('/meetup/comments', meetupController.getMeetupComments);
+  // POST
   app.post('/meetup', meetupController.postNewMeetup);
   app.post('/meetup/rsvp', meetupController.postRsvpMeetup);
   app.post('/meetup/reaction', meetupController.postMeetupReaction);

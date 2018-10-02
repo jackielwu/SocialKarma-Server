@@ -46,23 +46,29 @@ exports.postNewMeetup = function(req, res) {
       return;
     }
   }
-  var newMeetup = {
-    title: title,
-    startTime: startTime,
-    endTime: endTime,
-    location: location,
-    organizer: organizer,
-  }
-  var { description } = req.body;
-  if (description != undefined) {
-    newMeetup.description = description;
-    newMeetup.shortDescription = description.substring(0, 100);
-  }
-  database.ref("meetups").push().set(newMeetup, function(error) {
-    if (error) {
-      res.status(500).send({ error: "Internal server error: Meetup could not be created."});
+  database.ref("users").child(organizer).then(function(snapshot) {
+    if (snapshot.exists()) {
+      var newMeetup = {
+        title: title,
+        startTime: startTime,
+        endTime: endTime,
+        location: location,
+        organizer: organizer,
+      }
+      var { description } = req.body;
+      if (description != undefined) {
+        newMeetup.description = description;
+        newMeetup.shortDescription = description.substring(0, 100);
+      }
+      database.ref("meetups").push().set(newMeetup, function(error) {
+        if (error) {
+          res.status(500).send({ error: "Internal server error: Meetup could not be created."});
+        } else {
+          res.status(200).send({ message: "success" });
+        }
+      });
     } else {
-      res.status(200).send({ message: "success" });
+      res.status(400).send({ error: "User does not exist." });
     }
   });
 }
