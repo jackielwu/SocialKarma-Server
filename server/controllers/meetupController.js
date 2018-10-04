@@ -10,18 +10,22 @@ var database = firebase.database();
   Default limit to 20 meetups per call
 */
 exports.getMeetups = function(req, res) {
-  var { startAt } = req.query;
+  var { endAt } = req.query;
   var ref = database.ref("meetups");
-  if (startAt === undefined) {
-    ref.orderByChild("startTime").limitToLast(5).once("value", function(snapshot) {
-      res.status(200).send(snapshot.val());
-    });
-  } else {
-    ref.orderByChild("startTime").startAt(parseInt(startAt)).limitToLast(5).once("value", function(snapshot) {
+  if (endAt === undefined) {
+    ref.orderByChild("startTime").limitToLast(20).once("value", function(snapshot) {
       if (snapshot.exists()) {
         res.status(200).send(snapshot.val());
       } else {
-        res.status(500).send({ error: "Internal Server Error: Invalid startAt time."});
+        res.status(500).send({ error: "Internal Server Error: Could not get meetups."});
+      }
+    });
+  } else {
+    ref.orderByChild("startTime").endAt(parseInt(endAt)).limitToLast(20).once("value", function(snapshot) {
+      if (snapshot.exists()) {
+        res.status(200).send(snapshot.val());
+      } else {
+        res.status(400).send({ error: "Invalid endAt time."});
       }
     });
   }
@@ -31,6 +35,15 @@ exports.getMeetups = function(req, res) {
   Get detail for a specific meetup
 */
 exports.getMeetupDetail = function(req, res) {
+  var { meetupId } = req.params;
+  var ref = database.ref("meetups");
+  ref.child(meetupId).once("value", function(snapshot) {
+    if (snapshot.exists()) {
+      res.status(200).send(snapshot.val());
+    } else {
+      res.status(404).send({ error: "Meetup not found." });
+    }
+  });
 }
 
 /**
@@ -39,6 +52,15 @@ exports.getMeetupDetail = function(req, res) {
   Default limit to 20 meetups per call
 */
 exports.getMeetupComments = function(req, res) {
+  var { meetupId } = req.params;
+  var ref = database.ref("meetupComments");
+  ref.orderByChild("meetup").equalTo(meetupId).limitToLast(20).once("value", function(snapshot) {
+    if (snapshot.exists()) {
+      res.status(200).send(snapshot.val());
+    } else {
+      res.status(400).send({ error: "Meetup does not have any comments." });
+    }
+  });
 }
 
 
