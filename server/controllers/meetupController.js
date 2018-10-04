@@ -10,6 +10,21 @@ var database = firebase.database();
   Default limit to 20 meetups per call
 */
 exports.getMeetups = function(req, res) {
+  var { startAt } = req.query;
+  var ref = database.ref("meetups");
+  if (startAt === undefined) {
+    ref.orderByChild("startTime").limitToLast(5).once("value", function(snapshot) {
+      res.status(200).send(snapshot.val());
+    });
+  } else {
+    ref.orderByChild("startTime").startAt(parseInt(startAt)).limitToLast(5).once("value", function(snapshot) {
+      if (snapshot.exists()) {
+        res.status(200).send(snapshot.val());
+      } else {
+        res.status(500).send({ error: "Internal Server Error: Invalid startAt time."});
+      }
+    });
+  }
 }
 
 /**
@@ -46,7 +61,7 @@ exports.postNewMeetup = function(req, res) {
       return;
     }
   }
-  database.ref("users").child(organizer).then(function(snapshot) {
+  database.ref("users").child(organizer).once("value", function(snapshot) {
     if (snapshot.exists()) {
       var newMeetup = {
         title: title,
