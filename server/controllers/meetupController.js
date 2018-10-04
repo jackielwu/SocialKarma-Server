@@ -23,7 +23,20 @@ exports.getMeetups = function(req, res) {
   } else {
     ref.orderByChild("startTime").endAt(parseInt(endAt)).limitToLast(20).once("value", function(snapshot) {
       if (snapshot.exists()) {
-        res.status(200).send(snapshot.val());
+        let response = snapshot.val();
+        var meetups = [];
+        Object.keys(response).forEach(function(key, index) {
+          var obj = {
+            meetupId: key,
+            title: response.key.title,
+            startTime: response.key.startTime,
+            endTime: response.key.endTime,
+            location: response.key.location,
+            organizer: response.key.organizer,
+          };
+          meetups.push(obj);
+        });
+        res.status(200).send(meetups);
       } else {
         res.status(400).send({ error: "Invalid endAt time."});
       }
@@ -54,9 +67,22 @@ exports.getMeetupDetail = function(req, res) {
 exports.getMeetupComments = function(req, res) {
   var { meetupId } = req.params;
   var ref = database.ref("meetupComments");
-  ref.orderByChild("meetup").equalTo(meetupId).limitToLast(20).once("value", function(snapshot) {
+  ref.orderByChild("meetupId").equalTo(meetupId).limitToLast(20).once("value", function(snapshot) {
     if (snapshot.exists()) {
-      res.status(200).send(snapshot.val());
+      let response = snapshot.val();
+      var comments = [];
+      Object.keys(response).forEach(function(key, index) {
+        var obj = {
+          meetupCommentId: key,
+          author: response.key.author,
+          meetupId: response.key.meetupId,
+          comment: response.key.comment,
+          timestamp: response.key.timestamp,
+          votes: response.key.votes
+        };
+        comments.push(obj);
+      });
+      res.status(200).send(comments);
     } else {
       res.status(400).send({ error: "Meetup does not have any comments." });
     }
@@ -86,11 +112,11 @@ exports.postNewMeetup = function(req, res) {
   database.ref("users").child(organizer).once("value", function(snapshot) {
     if (snapshot.exists()) {
       var newMeetup = {
-        title: title,
-        startTime: startTime,
-        endTime: endTime,
-        location: location,
-        organizer: organizer,
+        "title": title,
+        "startTime": startTime,
+        "endTime": endTime,
+        "location": location,
+        "organizer": organizer,
       }
       var { description } = req.body;
       if (description != undefined) {
@@ -218,7 +244,7 @@ exports.postMeetupComment = function(req, res) {
           let commentsKey = "comments/" + meetupCommentKey;
           meetupCommentRef.set({
             "author": userId,
-            "meetup": meetupId,
+            "meetupId": meetupId,
             "comment": comment,
             "timestamp": timestamp,
             "votes": 0
