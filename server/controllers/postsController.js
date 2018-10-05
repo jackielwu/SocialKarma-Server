@@ -24,7 +24,7 @@ exports.postNewPost = function(req, res) {
         res.status(400).send({ error: "Invalid location parameter" });
         return;
     }
-    database.ref("users").child(author).then(function(snapshot) {
+    database.ref("users").child(author).once("value", function(snapshot) {
         if (snapshot.exists()) {
             var newPost = {
                 location: location,
