@@ -4,10 +4,47 @@ var path = require('path');
 var firebase = require('../config/fire');
 var database = firebase.database();
 
+function calcGeo (lat, lng) {
+    return new Promise(function(resolve, reject) {
+        database.ref("geolocation").once("value", function (snapshot) {
+            snapshot.forEach(function (entry) {
+                if (entry.child("coord1/lat").val() >= lat
+                    && entry.child("coord2/lat").val() <= lat
+                    && entry.child("coord1/lng").val() <= lng
+                    && entry.child("coord2/lng").val() >= lng
+                ) {
+                    resolve(entry.key);
+                }
+            });
+        });
+    });
+}
+
+exports.geo = async function(req, res) {
+    var g = await calcGeo(40.424305, -86.913188);
+    res.status(200).send({ geo: g });
+    return;
+};
+
 /* GET */
 
 exports.getPosts = function(req, res) {
-
+    var { geolocation } = req.query;
+    if (geolocation === undefined) {
+        res.status(400).send({ error: "Required parameters to query posts are missing."});
+        return;
+    } else {
+        var ref = database.ref("posts");
+        ref.orderByChild("geolocation").equalTo(geolocation).on("value", function(snapshot) {
+            if (snapshot.exists()) {
+                res.status(200).send(snapshot.val());
+                return;
+            } else {
+                res.status(500).send({ error: "Internal Server Error: Could not get posts."});
+                return;
+            }
+        });
+    }
 };
 
 /* POST */
@@ -27,7 +64,7 @@ exports.postNewPost = function(req, res) {
     database.ref("users").child(author).once("value", function(snapshot) {
         if (snapshot.exists()) {
             var newPost = {
-                location: location,
+                geolocation: calcGeo(location["lat"], location["lng"]),
                 author: author,
                 content: content,
                 karma: 0

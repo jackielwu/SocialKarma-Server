@@ -19,6 +19,8 @@ module.exports = function(app) {
 
   app.get('/posts', postsController.getPosts);
 
+  app.get('/geo', postsController.geo);
+
   // POST
   app.post('/meetup/rsvp', meetupController.postRsvpMeetup);
   app.post('/meetup/reaction', meetupController.postMeetupReaction);
