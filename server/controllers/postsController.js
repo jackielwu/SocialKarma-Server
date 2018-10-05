@@ -21,7 +21,9 @@ function calcGeo (lat, lng) {
 }
 
 exports.geo = async function(req, res) {
-    var g = await calcGeo(40.424305, -86.913188);
+    var { lat, lng } = req. query;
+    //40.424305, -86.913188
+    var g = await calcGeo(lat, lng);
     res.status(200).send({ geo: g });
     return;
 };
