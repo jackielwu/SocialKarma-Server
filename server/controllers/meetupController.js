@@ -10,12 +10,36 @@ var database = firebase.database();
   Default limit to 20 meetups per call
 */
 exports.getMeetups = function(req, res) {
-  var { endAt } = req.query;
+  var { endAt, userId } = req.query;
   var ref = database.ref("meetups");
   if (endAt === undefined) {
     ref.orderByChild("startTime").limitToLast(20).once("value", function(snapshot) {
       if (snapshot.exists()) {
-        res.status(200).send(snapshot.val());
+        let response = snapshot.val();
+        var meetups = [];
+        Object.keys(response).forEach(function(key, index) {
+          var obj = {
+            meetupId: key,
+            title: response[key].title,
+            startTime: response[key].startTime,
+            endTime: response[key].endTime,
+            location: response[key].location,
+            organizer: response[key].organizer,
+            organizerName: response[key].organizerName,
+          };
+          if (response[key].shortDescription != undefined) {
+            obj.shortDescription = response[key].shortDescription;
+          }
+          if (userId != undefined) {
+            Object.keys(response[key].usersAttending).forEach(function(key, index) {
+              if (key === userId) {
+                obj.attending = true;
+              }
+            });
+          }
+          meetups.push(obj);
+        });
+        res.status(200).send(meetups);
       } else {
         res.status(500).send({ error: "Internal Server Error: Could not get meetups."});
       }
@@ -28,12 +52,23 @@ exports.getMeetups = function(req, res) {
         Object.keys(response).forEach(function(key, index) {
           var obj = {
             meetupId: key,
-            title: response.key.title,
-            startTime: response.key.startTime,
-            endTime: response.key.endTime,
-            location: response.key.location,
-            organizer: response.key.organizer,
+            title: response[key].title,
+            startTime: response[key].startTime,
+            endTime: response[key].endTime,
+            location: response[key].location,
+            organizer: response[key].organizer,
+            organizerName: response[key].organizerName,
           };
+          if (response[key].shortDescription != undefined) {
+            obj.shortDescription = response[key].shortDescription;
+          }
+          if (userId != undefined) {
+            Object.keys(response[key].usersAttending).forEach(function(key, index) {
+              if (key === userId) {
+                obj.attending = true;
+              }
+            });
+          }
           meetups.push(obj);
         });
         res.status(200).send(meetups);
@@ -49,10 +84,29 @@ exports.getMeetups = function(req, res) {
 */
 exports.getMeetupDetail = function(req, res) {
   var { meetupId } = req.params;
+  var { userId } = req.query;
   var ref = database.ref("meetups");
   ref.child(meetupId).once("value", function(snapshot) {
     if (snapshot.exists()) {
-      res.status(200).send(snapshot.val());
+      var promises = [];
+      var obj = snapshot.val();
+      Object.keys(snapshot.val().usersAttending).forEach(function(key, index) {
+        promises.push(database.ref("users").child(key).once("value"));
+        if (userId != undefined) {
+          if (userId === key) {
+            obj.attending = true;
+          }
+        }
+      });
+      Promise.all(promises).then(function(snapshots) {
+        var users = [];
+        snapshots.forEach(function(snap) {
+          users.push(snap.val());
+        });
+        obj.usersAttending = users;
+        obj.meetupId = meetupId;
+        res.status(200).send(obj);
+      });
     } else {
       res.status(404).send({ error: "Meetup not found." });
     }
@@ -74,11 +128,12 @@ exports.getMeetupComments = function(req, res) {
       Object.keys(response).forEach(function(key, index) {
         var obj = {
           meetupCommentId: key,
-          author: response.key.author,
-          meetupId: response.key.meetupId,
-          comment: response.key.comment,
-          timestamp: response.key.timestamp,
-          votes: response.key.votes
+          author: response[key].author,
+          authorName: response[key].authorName,
+          meetupId: response[key].meetupId,
+          comment: response[key].comment,
+          timestamp: response[key].timestamp,
+          votes: response[key].votes
         };
         comments.push(obj);
       });
@@ -100,14 +155,15 @@ exports.postNewMeetup = function(req, res) {
   if (title === undefined || startTime === undefined || endTime === undefined || location === undefined || organizer === undefined) {
     res.status(400).send({ error: "Required parameters to create a new meetup are missing."} );
     return;
-  } else if (location["name"] === undefined && location["coordinates"] === undefined) {
+  } else if (location["coordinates"] === undefined) {
     res.status(400).send({ error: "Invalid location parameter" });
     return;
-  } else if (location["coordinates"] != undefined) {
-    if (location["coordinates"]["lat"] === undefined || location["coordinates"]["lng"] === undefined) {
-      res.status(400).send({ error: "Invalid location parameter" });
-      return;
-    }
+  } else if (location["coordinates"]["lat"] === undefined || location["coordinates"]["lng"] === undefined) {
+    res.status(400).send({ error: "Invalid location parameter" });
+    return;
+  } else if (parseInt(startTime) == NaN || parseInt(endTime) == NaN || parseInt(startTime) > parseInt(endTime)) {
+    res.status(400).send({ error: "Meetup ends before it starts." });
+    return;
   }
   database.ref("users").child(organizer).once("value", function(snapshot) {
     if (snapshot.exists()) {
@@ -117,16 +173,23 @@ exports.postNewMeetup = function(req, res) {
         "endTime": endTime,
         "location": location,
         "organizer": organizer,
+        "organizerName": snapshot.val().username,
       }
+      newMeetup["usersAttending"] = {};
+      newMeetup["usersAttending"][organizer] = true;
       var { description } = req.body;
       if (description != undefined) {
         newMeetup.description = description;
         newMeetup.shortDescription = description.substring(0, 100);
       }
-      database.ref("meetups").push().set(newMeetup, function(error) {
+      var meetupRef = database.ref("meetups").push();
+      meetupRef.set(newMeetup, function(error) {
         if (error) {
           res.status(500).send({ error: "Internal server error: Meetup could not be created."});
         } else {
+          var meetupObj = {};
+          meetupObj[meetupRef.key] = true;
+          database.ref("users").child(organizer + "/meetupsAttending").update(meetupObj);
           res.status(200).send({ message: "success" });
         }
       });
@@ -152,6 +215,9 @@ exports.postRsvpMeetup = function(req, res) {
               if (error) {
                 res.status(500).send({ error: "Internal server error: Could not RSVP to meetup." });
               } else {
+                var meetupObj = {};
+                meetupObj[meetupId] = true;
+                database.ref("users").child(userId + "/meetupsAttending").update(meetupObj);
                 res.status(200).send({ message: "success" });
               }
             });
@@ -162,6 +228,9 @@ exports.postRsvpMeetup = function(req, res) {
               if (error) {
                 res.status(500).send({ error: "Internal server error: Could not RSVP to meetup." });
               } else {
+                var meetupObj = {};
+                meetupObj[meetupId] = true;
+                database.ref("users").child(userId + "/meetupsAttending").update(meetupObj);
                 res.status(200).send({ message: "success" });
               }
             });
@@ -244,6 +313,7 @@ exports.postMeetupComment = function(req, res) {
           let commentsKey = "comments/" + meetupCommentKey;
           meetupCommentRef.set({
             "author": userId,
+            "authorName": userSnapshot.val().username,
             "meetupId": meetupId,
             "comment": comment,
             "timestamp": timestamp,
