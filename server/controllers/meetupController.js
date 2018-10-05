@@ -10,12 +10,53 @@ var database = firebase.database();
   Default limit to 20 meetups per call
 */
 exports.getMeetups = function(req, res) {
+  var { endAt } = req.query;
+  var ref = database.ref("meetups");
+  if (endAt === undefined) {
+    ref.orderByChild("startTime").limitToLast(20).once("value", function(snapshot) {
+      if (snapshot.exists()) {
+        res.status(200).send(snapshot.val());
+      } else {
+        res.status(500).send({ error: "Internal Server Error: Could not get meetups."});
+      }
+    });
+  } else {
+    ref.orderByChild("startTime").endAt(parseInt(endAt)).limitToLast(20).once("value", function(snapshot) {
+      if (snapshot.exists()) {
+        let response = snapshot.val();
+        var meetups = [];
+        Object.keys(response).forEach(function(key, index) {
+          var obj = {
+            meetupId: key,
+            title: response.key.title,
+            startTime: response.key.startTime,
+            endTime: response.key.endTime,
+            location: response.key.location,
+            organizer: response.key.organizer,
+          };
+          meetups.push(obj);
+        });
+        res.status(200).send(meetups);
+      } else {
+        res.status(400).send({ error: "Invalid endAt time."});
+      }
+    });
+  }
 }
 
 /**
   Get detail for a specific meetup
 */
 exports.getMeetupDetail = function(req, res) {
+  var { meetupId } = req.params;
+  var ref = database.ref("meetups");
+  ref.child(meetupId).once("value", function(snapshot) {
+    if (snapshot.exists()) {
+      res.status(200).send(snapshot.val());
+    } else {
+      res.status(404).send({ error: "Meetup not found." });
+    }
+  });
 }
 
 /**
@@ -24,6 +65,28 @@ exports.getMeetupDetail = function(req, res) {
   Default limit to 20 meetups per call
 */
 exports.getMeetupComments = function(req, res) {
+  var { meetupId } = req.params;
+  var ref = database.ref("meetupComments");
+  ref.orderByChild("meetupId").equalTo(meetupId).limitToLast(20).once("value", function(snapshot) {
+    if (snapshot.exists()) {
+      let response = snapshot.val();
+      var comments = [];
+      Object.keys(response).forEach(function(key, index) {
+        var obj = {
+          meetupCommentId: key,
+          author: response.key.author,
+          meetupId: response.key.meetupId,
+          comment: response.key.comment,
+          timestamp: response.key.timestamp,
+          votes: response.key.votes
+        };
+        comments.push(obj);
+      });
+      res.status(200).send(comments);
+    } else {
+      res.status(400).send({ error: "Meetup does not have any comments." });
+    }
+  });
 }
 
 
@@ -46,14 +109,14 @@ exports.postNewMeetup = function(req, res) {
       return;
     }
   }
-  database.ref("users").child(organizer).then(function(snapshot) {
+  database.ref("users").child(organizer).once("value", function(snapshot) {
     if (snapshot.exists()) {
       var newMeetup = {
-        title: title,
-        startTime: startTime,
-        endTime: endTime,
-        location: location,
-        organizer: organizer,
+        "title": title,
+        "startTime": startTime,
+        "endTime": endTime,
+        "location": location,
+        "organizer": organizer,
       }
       var { description } = req.body;
       if (description != undefined) {
@@ -181,7 +244,7 @@ exports.postMeetupComment = function(req, res) {
           let commentsKey = "comments/" + meetupCommentKey;
           meetupCommentRef.set({
             "author": userId,
-            "meetup": meetupId,
+            "meetupId": meetupId,
             "comment": comment,
             "timestamp": timestamp,
             "votes": 0
