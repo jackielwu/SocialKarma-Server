@@ -49,6 +49,32 @@ exports.getPosts = function(req, res) {
     }
 };
 
+exports.getPostComments = function(req, res) {
+  var { postId } = req.params;
+  var ref = database.ref("postComments");
+  ref.orderByChild("postId").equalTo(postId).limitToLast(20).once("value", function(snapshot) {
+    if (snapshot.exists()) {
+      let response = snapshot.val();
+      var comments = [];
+      Object.keys(response).forEach(function(key, index) {
+        var obj = {
+          postCommentId: key,
+          author: response[key].author,
+          authorName: response[key].authorName,
+          postId: response[key].postId,
+          comment: response[key].comment,
+          timestamp: response[key].timestamp,
+          votes: response[key].votes
+        };
+        comments.push(obj);
+      });
+      res.status(200).send(comments);
+    } else {
+      res.status(400).send({ error: "Post does not have any comments." });
+    }
+  });
+};
+
 /* POST */
 
 /**
@@ -82,4 +108,46 @@ exports.postNewPost = function(req, res) {
             res.status(400).send({ error: "User does not exist." });
         }
     });
+};
+
+exports.postPostComment = function(req, res) {
+  var { userId, postId, comment } = req.body;
+  let timestamp = Math.floor(Date.now() / 1000);
+  database.ref("users").child(userId).once("value").then(function(userSnapshot) {
+    if (userSnapshot.exists()) {
+      database.ref("posts").child(postId).once("value").then(function(snapshot) {
+        if (snapshot.exists()) {
+          var postCommentRef = database.ref("postComments").push();
+          var postCommentKey = postCommentRef.key;
+          let commentsKey = "comments/" + postCommentKey;
+          postCommentRef.set({
+            "author": userId,
+            "authorName": userSnapshot.val().username,
+            "postId": postId,
+            "comment": comment,
+            "timestamp": timestamp,
+            "votes": 0
+          }, function(error) {
+            if (error) {
+              res.status(500).send({ error: "Internal server error: Comment could not be created for post." });
+            } else {
+              var newComment = {};
+              newComment[commentsKey] = true;
+              database.ref("posts").child(postId).update(newComment, function(error) {
+                if (error) {
+                  res.status(500).send({ error: "Internal server error: Comment could not be created for post." });
+                } else {
+                  res.status(200).send({ message: "success" });
+                }
+              });
+            }
+          });
+        } else {
+          res.status(400).send({ error: "Post does not exist." });
+        }
+      });
+    } else {
+      res.status(400).send({ error: "User does not exist." });
+    }
+  });
 };
