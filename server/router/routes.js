@@ -27,12 +27,13 @@ module.exports = function(app) {
 
 
   /* Posts endpoints */
-  // GET
-  app.get('/posts', postsController.getPosts);
-  app.get('/geo', postsController.geo);
-  app.get('/post/comments', postsController.getPostComments);
 
   // POST
   app.post('/post', postsController.postNewPost);
   app.post('/post/comment', postsController.postPostComment);
+
+  // GET
+  app.get('/posts', postsController.getPosts);
+  app.get('/geo', postsController.geo);
+  app.get('/post/comments', postsController.getPostComments);
 };
