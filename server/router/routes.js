@@ -17,9 +17,6 @@ module.exports = function(app) {
   app.get('/meetup/comments/:meetupId', meetupController.getMeetupComments);
   app.get('/meetup/:meetupId', meetupController.getMeetupDetail);
 
-  app.get('/posts', postsController.getPosts);
-
-  app.get('/geo', postsController.geo);
 
   // POST
   app.post('/meetup/rsvp', meetupController.postRsvpMeetup);
@@ -28,5 +25,15 @@ module.exports = function(app) {
   app.post('/meetup/comment', meetupController.postMeetupComment);
   app.post('/meetup', meetupController.postNewMeetup);
 
+
+  /* Posts endpoints */
+
+  // POST
   app.post('/post', postsController.postNewPost);
+  app.post('/post/comment', postsController.postPostComment);
+
+  // GET
+  app.get('/posts', postsController.getPosts);
+  app.get('/geo', postsController.geo);
+  app.get('/post/comments', postsController.getPostComments);
 };

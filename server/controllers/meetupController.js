@@ -154,16 +154,12 @@ exports.postNewMeetup = function(req, res) {
   var { title, startTime, endTime, location, organizer } = req.body;
   if (title === undefined || startTime === undefined || endTime === undefined || location === undefined || organizer === undefined) {
     res.status(400).send({ error: "Required parameters to create a new meetup are missing."} );
-    return;
   } else if (location["coordinates"] === undefined) {
     res.status(400).send({ error: "Invalid location parameter" });
-    return;
   } else if (location["coordinates"]["lat"] === undefined || location["coordinates"]["lng"] === undefined) {
     res.status(400).send({ error: "Invalid location parameter" });
-    return;
   } else if (parseInt(startTime) == NaN || parseInt(endTime) == NaN || parseInt(startTime) > parseInt(endTime)) {
     res.status(400).send({ error: "Meetup ends before it starts." });
-    return;
   }
   database.ref("users").child(organizer).once("value", function(snapshot) {
     if (snapshot.exists()) {
