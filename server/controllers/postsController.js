@@ -55,18 +55,15 @@ exports.getPosts = function(req, res) {
  * Create new post
  */
 exports.postNewPost = function(req, res) {
-    var { location, author, content } = req.body;
-    if (location === undefined || author === undefined || content === undefined) {
+    var { geolocation, author, content } = req.body;
+    if (geolocation === undefined || author === undefined || content === undefined) {
         res.status(400).send({ error: "Required parameters to create a new post are missing."} );
-        return;
-    } else if (location["lat"] === undefined || location["lng"] === undefined) {
-        res.status(400).send({ error: "Invalid location parameter" });
         return;
     }
     database.ref("users").child(author).once("value", function(snapshot) {
         if (snapshot.exists()) {
             var newPost = {
-                geolocation: calcGeo(location["lat"], location["lng"]),
+                geolocation: geolocation,
                 author: author,
                 content: content,
                 karma: 0
