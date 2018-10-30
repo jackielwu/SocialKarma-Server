@@ -58,7 +58,6 @@ exports.getPosts = function(req, res) {
                 };
                 posts.push(obj);
               });
-              console.log(posts);
               res.status(200).send(posts);
             } else {
               res.status(500).send({ error: "Internal Server Error: Could not get posts."});
@@ -69,7 +68,7 @@ exports.getPosts = function(req, res) {
 };
 
 exports.getPostComments = function(req, res) {
-  var { postId } = req.params;
+  var { postId } = req.body;
   var ref = database.ref("postComments");
   ref.orderByChild("postId").equalTo(postId).limitToLast(20).once("value", function(snapshot) {
     if (snapshot.exists()) {

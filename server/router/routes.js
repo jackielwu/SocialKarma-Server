@@ -35,5 +35,5 @@ module.exports = function(app) {
   // GET
   app.get('/posts', postsController.getPosts);
   app.get('/geo', postsController.geo);
-  app.get('/post/comments', postsController.getPostComments);
+  app.post('/post/comments', postsController.getPostComments);
 };
