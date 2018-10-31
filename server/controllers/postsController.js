@@ -53,9 +53,11 @@ exports.getPosts = function(req, res) {
                   authorName: response[key].authorName,
                   content: response[key].content,
                   upvoteCount: response[key].upvoteCount,
-                  commentCount: response[key].commentCount,
                   timestamp: response[key].timestamp,
                 };
+                if (response[key].comments) {
+                  obj.commentCount = Object.keys(response[key].comments).length;
+                }
                 posts.push(obj);
               });
               res.status(200).send(posts);
@@ -123,11 +125,16 @@ exports.postNewPost = function(req, res) {
                   commentCount: 0,
                   timestamp: timestamp
               };
-              database.ref("posts").push().set(newPost, function(error) {
+              var newPostRef = database.ref("posts").push();
+              var newPostKey = newPostRef.key;
+              newPostRef.set(newPost, function(error) {
                   if (error) {
                       return res.status(500).send({ error: "Internal server error: Post could not be created."});
                   } else {
-                      return res.status(200).send({ message: "success" });
+                    var newPostObj = {};
+                    newPostObj[newPostKey] = true;
+                    database.ref("users").child(author + "/posts").update(newPostObj);
+                    return res.status(200).send({ message: "success" });
                   }
               });
           });
@@ -164,6 +171,7 @@ exports.postPostComment = function(req, res) {
                 if (error) {
                   res.status(500).send({ error: "Internal server error: Comment could not be created for post." });
                 } else {
+                  database.ref("users").child(userId).update(newComment);
                   res.status(200).send({ message: "success" });
                 }
               });
