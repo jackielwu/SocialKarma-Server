@@ -186,3 +186,37 @@ exports.postPostComment = function(req, res) {
     }
   });
 };
+
+exports.postPostVote = function(req, res) {
+  var { userId, postId, vote } = req.body;
+  database.ref("users").child(userId).once("value").then(function(userSnapshot) {
+    if (userSnapshot.exists()) {
+      database.ref("posts").child(postId).once("value").then(function(snapshot) {
+        if (snapshot.exists()) {
+          database.ref("posts").child(postId).update({
+            "votes" : snapshot.val().votes + (vote == 0 ? -(userSnapshot.val()[userId].votes.posts[postId]) : vote)
+          }, function(error) {
+            if (error) {
+              res.status(500).send({ error: "Coould not create reaction for post." });
+            } else {
+              const userVoteKey = "votes/posts/" + postId;
+              var userVote = {};
+              userVote[userVoteKey] = vote;
+              database.ref("users/" + userId).update(userVote, function(error) {
+                if (error) {
+                  res.status(500).send({ error: "Internal server error: Could not create vote for post." });
+                } else {
+                  res.status(200).send({ message: "success" });
+                }
+              });
+            }
+          });
+        } else {
+          res.status(400).send({ error: "Post does not exist." });
+        }
+      });
+    } else {
+      res.status(400).send({ error: "User does not exist." });
+    }
+  });
+}
