@@ -115,13 +115,14 @@ exports.postNewPost = function(req, res) {
               return res.status(400).send({ error: "The requested location is not currently provided." });
               return;
             }
+            //upvoteCount -> votes
               var newPost = {
                   geolocation: g,
                   title: title,
                   author: author,
                   authorName: snapshot.val().username,
                   content: content,
-                  upvoteCount: 0,
+                  votes: 0,
                   commentCount: 0,
                   timestamp: timestamp
               };
