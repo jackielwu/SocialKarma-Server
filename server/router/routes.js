@@ -32,6 +32,7 @@ module.exports = function(app) {
   app.post('/post', postsController.postNewPost);
   app.post('/post/vote', postsController.postPostVote);
   app.post('/post/comment', postsController.postPostComment);
+  app.post('/post/comment/vote', postsController.postPostCommentVote);
 
   // GET
   app.get('/posts', postsController.getPosts);
