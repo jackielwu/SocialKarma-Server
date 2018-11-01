@@ -45,6 +45,7 @@ exports.getPosts = function(req, res) {
             if (snapshot.exists()) {
               let response = snapshot.val();
               var posts = [];
+              //upvoteCount -> votes
               Object.keys(response).forEach(function(key, index) {
                 var obj = {
                   postId: key,
@@ -52,7 +53,7 @@ exports.getPosts = function(req, res) {
                   author: response[key].author,
                   authorName: response[key].authorName,
                   content: response[key].content,
-                  upvoteCount: response[key].upvoteCount,
+                  votes: response[key].votes,
                   timestamp: response[key].timestamp,
                 };
                 if (response[key].comments) {
