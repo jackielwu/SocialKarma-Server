@@ -35,8 +35,13 @@ exports.geo = async function(req, res) {
 
 /* GET */
 
+/**
+ *  getPosts()
+ *
+ *  sortby parameter - 0 = latest
+ */
 exports.getPosts = function(req, res) {
-    var { geolocation } = req.query;
+    var { geolocation, sortby } = req.query;
     if (geolocation === undefined) {
         return res.status(400).send({ error: "Required parameters to query posts are missing."});
     } else {
@@ -61,6 +66,13 @@ exports.getPosts = function(req, res) {
                 }
                 posts.push(obj);
               });
+              if (sortby !== undefined) {
+                if (sortby == 0) {
+                  posts.sort(function(a, b) {
+                    return b.timestamp - a.timestamp;
+                  });
+                }
+              }
               res.status(200).send(posts);
             } else {
               res.status(500).send({ error: "Internal Server Error: Could not get posts."});
@@ -71,7 +83,7 @@ exports.getPosts = function(req, res) {
 };
 
 exports.getPostComments = function(req, res) {
-  var { postId } = req.body;
+  var { postId, sortby } = req.body;
   var ref = database.ref("postComments");
   ref.orderByChild("postId").equalTo(postId).limitToLast(20).once("value", function(snapshot) {
     if (snapshot.exists()) {
@@ -89,6 +101,13 @@ exports.getPostComments = function(req, res) {
         };
         comments.push(obj);
       });
+      if (sortby !== undefined) {
+        if (sortby == 0) {
+          comments.sort(function(a, b) {
+            return b.timestamp - a.timestamp;
+          });
+        }
+      }
       res.status(200).send(comments);
     } else {
       res.status(400).send({ error: "Post does not have any comments." });

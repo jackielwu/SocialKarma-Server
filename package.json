@@ -1,0 +1,25 @@
+{
+  "name": "socialkarma-server",
+  "version": "1.0.0",
+  "description": "## Running the server Once Node.js is installed, run `node app.js` to run the server",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jackielwu/SocialKarma-Server.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/jackielwu/SocialKarma-Server/issues"
+  },
+  "homepage": "https://github.com/jackielwu/SocialKarma-Server#readme",
+  "dependencies": {
+    "body-parser": "^1.18.3",
+    "express": "^4.16.4",
+    "firebase": "^5.5.6",
+    "node-fetch": "^2.2.0"
+  }
+}
