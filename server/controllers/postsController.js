@@ -71,6 +71,10 @@ exports.getPosts = function(req, res) {
                   posts.sort(function(a, b) {
                     return b.timestamp - a.timestamp;
                   });
+                } else if (sortby == 1) {
+                  posts.sort(function(a, b) {
+                    return b.votes - a.votes;
+                  });
                 }
               }
               res.status(200).send(posts);
@@ -105,6 +109,10 @@ exports.getPostComments = function(req, res) {
         if (sortby == 0) {
           comments.sort(function(a, b) {
             return b.timestamp - a.timestamp;
+          });
+        } else if (sortby == 1) {
+          posts.sort(function(a, b) {
+            return b.votes - a.votes;
           });
         }
       }
@@ -233,6 +241,10 @@ exports.postPostVote = function(req, res) {
                   res.status(500).send({ error: "Internal server error: Could not create vote for post." });
                 } else {
                   var authorId = snapshot.val().author
+                  if (authorId === userId) {
+                    res.status(200).send({ message: "success" });
+                    return;
+                  }
                   database.ref("users/" + authorId).once("value").then(function(authorSnap) {
                     var newCount = newVote;
                     if (authorSnap.val().karma !== undefined) {
@@ -285,6 +297,10 @@ exports.postPostCommentVote = function(req, res) {
                   res.status(500).send({ error: "Internal server error: Could not create vote for post comment." });
                 } else {
                   var authorId = snapshot.val().author
+                  if (authorId === userId) {
+                    res.status(200).send({ message: "success" });
+                    return;
+                  }
                   database.ref("users/" + authorId).once("value").then(function(authorSnap) {
                     var newCount = newVote;
                     if (authorSnap.val().karma !== undefined) {
