@@ -214,11 +214,16 @@ exports.postPostVote = function(req, res) {
     if (userSnapshot.exists()) {
       database.ref("posts").child(postId).once("value").then(function(snapshot) {
         if (snapshot.exists()) {
+          if (userSnapshot.val().votes !== undefined && userSnapshot.val().votes.posts[postId] == vote) {
+            res.status(400).send({ error: "Already voted" });
+            return;
+          }
+          var newVote = vote == 0 ? -(userSnapshot.val().votes.posts[postId]) : vote;
           database.ref("posts").child(postId).update({
-            "votes" : snapshot.val().votes + (vote == 0 ? -(userSnapshot.val()[userId].votes.posts[postId]) : vote)
+            "votes" : snapshot.val().votes + newVote
           }, function(error) {
             if (error) {
-              res.status(500).send({ error: "Coould not create reaction for post." });
+              res.status(500).send({ error: "Could not create reaction for post." });
             } else {
               const userVoteKey = "votes/posts/" + postId;
               var userVote = {};
@@ -227,7 +232,20 @@ exports.postPostVote = function(req, res) {
                 if (error) {
                   res.status(500).send({ error: "Internal server error: Could not create vote for post." });
                 } else {
-                  res.status(200).send({ message: "success" });
+                  var authorId = snapshot.val().author
+                  database.ref("users/" + authorId).once("value").then(function(authorSnap) {
+                    var newCount = newVote;
+                    if (authorSnap.val().karma !== undefined) {
+                      newCount = authorSnap.val().karma + newVote;
+                    }
+                    database.ref("users/" + authorId).update({"karma": newCount}, function(error) {
+                      if (error) {
+                        res.status(500).send({ error: "Internal server error: Could not create vote for post." });
+                      } else {
+                        res.status(200).send({ message: "success" });
+                      }
+                    });
+                  });
                 }
               });
             }
@@ -248,8 +266,13 @@ exports.postPostCommentVote = function(req, res) {
     if (userSnapshot.exists()) {
       database.ref("postComments").child(postCommentId).once("value").then(function(snapshot) {
         if (snapshot.exists()) {
+          if (userSnapshot.val().votes !== undefined && userSnapshot.val().votes.postComments[postCommentId] == vote) {
+            res.status(400).send({ error: "Already voted" });
+            return;
+          }
+          var newVote = vote == 0 ? -(userSnapshot.val().votes.postComments[postCommentId]) : vote;
           database.ref("postComments").child(postCommentId).update({
-            "votes" : snapshot.val().votes + (vote == 0 ? -(userSnapshot.val()[userId].votes.postComments[postCommentId]) : vote)
+            "votes" : snapshot.val().votes + newVote
           }, function(error) {
             if (error) {
               res.status(500).send({ error: "Coould not create reaction for post." });
@@ -261,7 +284,20 @@ exports.postPostCommentVote = function(req, res) {
                 if (error) {
                   res.status(500).send({ error: "Internal server error: Could not create vote for post comment." });
                 } else {
-                  res.status(200).send({ message: "success" });
+                  var authorId = snapshot.val().author
+                  database.ref("users/" + authorId).once("value").then(function(authorSnap) {
+                    var newCount = newVote;
+                    if (authorSnap.val().karma !== undefined) {
+                      newCount = authorSnap.val().karma + newVote;
+                    }
+                    database.ref("users/" + authorId).update({"karma": newCount}, function(error) {
+                      if (error) {
+                        res.status(500).send({ error: "Internal server error: Could not create vote for comment." });
+                      } else {
+                        res.status(200).send({ message: "success" });
+                      }
+                    });
+                  });
                 }
               });
             }
