@@ -103,11 +103,17 @@ exports.postChat = function(req, res) {
                   var newUserChatObj = {};
                   newUserChatObj[userChat] = true;
                   newUserChatObj[partnerChat] = true;
+                  var userPartner = userId + "/chatMembers/" + partnerId;
+                  var partnerUser = partnerId + "/chatMembers/" + userId;
+                  newUserChatObj[userPartner] = newChatRef.key;
+                  newUserChatObj[partnerUser] = newChatRef.key;
                   ref.update(newUserChatObj, function(error) {
                     if (error) {
                       return res.status(500).send({ error: "Could not create new chat for user." });
                     } else {
-                      return res.status(200).send({ message: "success." });
+                      chatObject.partnerId = partnerId;
+                      chatObject.chatId = newChatRef.key;
+                      return res.status(200).send(chatObject);
                     }
                   });
                 }
