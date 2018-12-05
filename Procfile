@@ -1,1 +1,1 @@
-web: npm rebuild; node server
+web: npm install grpc; node server
