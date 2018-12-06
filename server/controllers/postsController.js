@@ -185,21 +185,25 @@ exports.postDeletePost = function(req, res) {
   var { userId, postId } = req.body;
   database.ref("users").child(userId).once("value").then(function(userSnapshot) {
     if (userSnapshot.exists()) {
-      database.ref("posts").child(postId).once("value").then(function(snapshot) {
+      database.ref("posts").child(postId).once("value", function(snapshot) {
         if (snapshot.exists()) {
           //delete post
-          //database.ref("posts").child(postId).remove();
+          database.ref("posts").child(postId).remove();
           //search comments
-          database.ref("postComments").orderByChild("postId").equalTo(postId).then(function(snapshot) {
+          database.ref("postComments").orderByChild("postId").equalTo(postId).once("value", function(snapshot) {
             snapshot.forEach(function(data) {
               console.log(data.key);
               //delete comments from users
               var commentUser = data.child("author").val();
-              //database.ref("users").child(commentUser).orderByChild("comments").equalTo(data.key).remove();
+              database.ref("users").child(commentUser).child("comments").child(data.key).remove();
+              //delete comments
+              database.ref("postComments").child(data.key).remove();
             });
           });
           //delete post from user
-          //userSnapshot.orderByChild("posts").equalTo(postId).remove();
+          //userSnapshot.child("posts").child(postId).remove();
+          database.ref("users").child(userId).child("posts").child(postId).remove();
+          res.status(200).send({ message: "success" });
         } else {
           res.status(400).send({ error: "Post does not exist." });
         }

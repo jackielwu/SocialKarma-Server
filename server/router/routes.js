@@ -34,6 +34,7 @@ module.exports = function(app) {
   app.post('/post/vote', postsController.postPostVote);
   app.post('/post/comment', postsController.postPostComment);
   app.post('/post/comment/vote', postsController.postPostCommentVote);
+  app.post('/post/delete', postsController.postDeletePost);
 
   // GET
   app.get('/posts', postsController.getPosts);
