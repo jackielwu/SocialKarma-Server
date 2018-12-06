@@ -46,7 +46,7 @@ exports.getMeetups = function(req, res) {
           });
           res.status(200).send(meetups);
         } else {
-          res.status(500).send([]);
+          res.status(200).send([]);
         }
       });
     } else {
