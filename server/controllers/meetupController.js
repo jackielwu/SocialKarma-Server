@@ -46,7 +46,7 @@ exports.getMeetups = function(req, res) {
           });
           res.status(200).send(meetups);
         } else {
-          res.status(500).send({ error: "Internal Server Error: Could not get meetups."});
+          res.status(500).send([]);
         }
       });
     } else {
