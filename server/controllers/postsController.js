@@ -173,6 +173,35 @@ exports.postNewPost = function(req, res) {
     });
 };
 
+exports.postDeletePost = function(req, res) {
+  var { userId, postId } = req.body;
+  database.ref("users").child(userId).once("value").then(function(userSnapshot) {
+    if (userSnapshot.exists()) {
+      database.ref("posts").child(postId).once("value").then(function(snapshot) {
+        if (snapshot.exists()) {
+          //delete post
+          //database.ref("posts").child(postId).remove();
+          //search comments
+          database.ref("postComments").orderByChild("postId").equalTo(postId).then(function(snapshot) {
+            snapshot.forEach(function(data) {
+              console.log(data.key);
+              //delete comments from users
+              var commentUser = data.child("author").val();
+              //database.ref("users").child(commentUser).orderByChild("comments").equalTo(data.key).remove();
+            });
+          });
+          //delete post from user
+          //userSnapshot.orderByChild("posts").equalTo(postId).remove();
+        } else {
+          res.status(400).send({ error: "Post does not exist." });
+        }
+      });
+    } else {
+      res.status(400).send({ error: "User does not exist."});
+    }
+  });
+};
+
 exports.postPostComment = function(req, res) {
   var { userId, postId, comment } = req.body;
   let timestamp = Math.floor(Date.now() / 1000);
@@ -212,6 +241,24 @@ exports.postPostComment = function(req, res) {
       });
     } else {
       res.status(400).send({ error: "User does not exist." });
+    }
+  });
+};
+
+exports.postDeleteComment = function(req, res) {
+  var { userId, postCommentId } = req.body;
+  database.ref("users").child(userId).once("value").then(function(userSnapshot) {
+    if (userSnapshot.exists()) {
+      database.ref("postComments").child(postCommentId).once("value").then(function(snapshot) {
+        if (snapshot.exists()) {
+          //delete post
+          //database.ref("posts").child(postCommentId).remove();
+        } else {
+          res.status(400).send({ error: "Comment does not exist." });
+        }
+      });
+    } else {
+      res.status(400).send({ error: "User does not exist."});
     }
   });
 };
