@@ -31,10 +31,12 @@ module.exports = function(app) {
 
   // POST
   app.post('/post', postsController.postNewPost);
+  app.post('/post/delete', postsController.postDeletePost);
   app.post('/post/vote', postsController.postPostVote);
   app.post('/post/comment', postsController.postPostComment);
+  app.post('/post/comment/delete', postsController.postDeleteComment);
   app.post('/post/comment/vote', postsController.postPostCommentVote);
-  app.post('/post/delete', postsController.postDeletePost);
+
 
   // GET
   app.get('/posts', postsController.getPosts);

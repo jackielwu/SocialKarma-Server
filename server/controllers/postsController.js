@@ -263,8 +263,14 @@ exports.postDeleteComment = function(req, res) {
     if (userSnapshot.exists()) {
       database.ref("postComments").child(postCommentId).once("value").then(function(snapshot) {
         if (snapshot.exists()) {
-          //delete post
-          //database.ref("posts").child(postCommentId).remove();
+          //delete comment from post
+          var postId = snapshot.child("postId").val();
+          database.ref("posts").child(postId).child("comments").child(postCommentId).remove();
+          //delete comment from user
+          database.ref("users").child(userId).child("comments").child(postCommentId).remove();
+          //delete comment
+          database.ref("postComments").child(postCommentId).remove();
+          res.status(200).send({ message: "success" });
         } else {
           res.status(400).send({ error: "Comment does not exist." });
         }
