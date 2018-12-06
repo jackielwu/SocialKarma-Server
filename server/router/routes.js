@@ -5,6 +5,7 @@ module.exports = function(app) {
   var mainController = require('../controllers/mainController');
   var meetupController = require('../controllers/meetupController');
   var postsController = require('../controllers/postsController');
+  var messagesController = require('../controllers/messagesController');
 
   /* Define routes here */
   app.get('/', mainController.getMain);
@@ -38,4 +39,14 @@ module.exports = function(app) {
   app.get('/posts', postsController.getPosts);
   app.get('/geo', postsController.geo);
   app.post('/post/comments', postsController.getPostComments);
+
+
+  /* Messages endpoints */
+
+  // GET
+  app.get('/messages', messagesController.getMessages);
+
+  // POST
+  app.post('/chat', messagesController.postChat);
+  app.post('/message', messagesController.postMessage);
 };

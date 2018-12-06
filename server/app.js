@@ -13,7 +13,7 @@ app.use(bodyParser.urlencoded({
   extended: true
 }));
 app.use(bodyParser.json());
-app.listen(PORT, function() {
+app.listen(process.env.PORT || 8080, function() {
   console.log("Listening on port " + PORT);
 });
 
