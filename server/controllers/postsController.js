@@ -65,6 +65,9 @@ exports.getPosts = function(req, res) {
                   if (response[key].comments) {
                     obj.commentCount = Object.keys(response[key].comments).length;
                   }
+                  if (response[key].coordinates) {
+                    obj.coordinates = response[key].coordinates;
+                  }
                   posts.push(obj);
                 }
               });
