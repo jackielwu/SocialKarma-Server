@@ -219,7 +219,7 @@ exports.postRsvpMeetup = function(req, res) {
           if (snapshot.hasChild("usersAttending")) {
             var userAttending = {};
             userAttending[userId] = true;
-            database.ref("meetups").child(meetupId + "/usersAttending").update(userAttending, function(error) {
+            database.ref("meetups/" + geolocation).child(meetupId + "/usersAttending").update(userAttending, function(error) {
               if (error) {
                 res.status(500).send({ error: "Internal server error: Could not RSVP to meetup." });
               } else {
@@ -232,7 +232,7 @@ exports.postRsvpMeetup = function(req, res) {
           } else {
             var userAttending = { "usersAttending": {} };
             userAttending["usersAttending"][userId] = true;
-            database.ref("meetups").child(meetupId).update(userAttending, function(error) {
+            database.ref("meetups/" + geolocation).child(meetupId).update(userAttending, function(error) {
               if (error) {
                 res.status(500).send({ error: "Internal server error: Could not RSVP to meetup." });
               } else {
