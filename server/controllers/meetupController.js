@@ -211,10 +211,10 @@ exports.postNewMeetup = function(req, res) {
   RSVP to a specific meetup
 */
 exports.postRsvpMeetup = function(req, res) {
-  var { userId, meetupId } = req.body;
+  var { userId, meetupId, geolocation } = req.body;
   database.ref("users").child(userId).once("value", function(userSnapshot) {
     if (userSnapshot.exists()) {
-      database.ref("meetups").child(meetupId).once("value", function(snapshot) {
+      database.ref("meetups/" + geolocation).child(meetupId).once("value", function(snapshot) {
         if (snapshot.exists()) {
           if (snapshot.hasChild("usersAttending")) {
             var userAttending = {};
