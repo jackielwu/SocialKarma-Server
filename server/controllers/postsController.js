@@ -4,7 +4,7 @@ var path = require('path');
 var firebase = require('../config/fire');
 var database = firebase.database();
 
-exports.calcGeo = function (lat, lng) {
+var calcGeo = function (lat, lng) {
     return new Promise(function(resolve, reject) {
         database.ref("geolocation").once("value", function (snapshot) {
             snapshot.forEach(function (entry) {
@@ -20,6 +20,8 @@ exports.calcGeo = function (lat, lng) {
         });
     });
 }
+
+exports.calcGeo = calcGeo;
 
 exports.geo = async function(req, res) {
     var { lat, lng } = req.query;
