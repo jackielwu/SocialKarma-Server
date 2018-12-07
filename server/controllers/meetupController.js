@@ -89,7 +89,7 @@ exports.getMeetups = function(req, res) {
   Get detail for a specific meetup
 */
 exports.getMeetupDetail = function(req, res) {
-  var { meetupId } = req.params;
+  var { meetupId } = req.body;
   var { userId } = req.query;
   var ref = database.ref("meetups");
   ref.child(meetupId).once("value", function(snapshot) {
