@@ -4,7 +4,7 @@ var path = require('path');
 var firebase = require('../config/fire');
 var database = firebase.database();
 
-function calcGeo (lat, lng) {
+var calcGeo = function (lat, lng) {
     return new Promise(function(resolve, reject) {
         database.ref("geolocation").once("value", function (snapshot) {
             snapshot.forEach(function (entry) {
@@ -20,6 +20,8 @@ function calcGeo (lat, lng) {
         });
     });
 }
+
+exports.calcGeo = calcGeo;
 
 exports.geo = async function(req, res) {
     var { lat, lng } = req.query;
@@ -287,12 +289,11 @@ exports.postPostVote = function(req, res) {
     if (userSnapshot.exists()) {
       database.ref("posts").child(postId).once("value").then(function(snapshot) {
         if (snapshot.exists()) {
-          if (userSnapshot.val().votes !== undefined && userSnapshot.val().votes.posts !== undefined && ( userSnapshot.val().votes.posts[postId] == vote )  ) {
+          if (userSnapshot.val().votes !== undefined && userSnapshot.val().votes.posts !== undefined && userSnapshot.val().votes.posts[postId] == vote) {
             res.status(400).send({ error: "Already voted" });
             return;
           }
           var newVote = vote == 0 ? -(userSnapshot.val().votes.posts[postId]) : vote;
-          
           database.ref("posts").child(postId).update({
             "votes" : snapshot.val().votes + newVote
           }, function(error) {
@@ -301,11 +302,21 @@ exports.postPostVote = function(req, res) {
             } else {
               const userVoteKey = "votes/posts/" + postId;
               var userVote = {};
-              if(userSnapshot.val().votes.posts[postId] != 0){
-                userVote[userVoteKey] = 0;
-              }else {
+              // userVote[userVoteKey] = vote;
+
+              try {
+                if(userSnapshot.val().votes.posts[postId] == 1 || userSnapshot.val().votes.posts[postId] == -1){
+                  console.log("it comes != 0");
+                  userVote[userVoteKey] = 0;
+                }else {
+                  console.log("it is not -1 or 1");
+                  userVote[userVoteKey] = vote;
+                }
+              } catch(err) {
                 userVote[userVoteKey] = vote;
+                console.log("error");
               }
+
               database.ref("users/" + userId).update(userVote, function(error) {
                 if (error) {
                   res.status(500).send({ error: "Internal server error: Could not create vote for post." });
@@ -361,13 +372,18 @@ exports.postPostCommentVote = function(req, res) {
             } else {
               const userVoteKey = "votes/postComments/" + postCommentId;
               var userVote = {};
-              //userVote[userVoteKey] = vote;
-              if(userSnapshot.val().votes.postComments !== undefined) {  
-                if(userSnapshot.val().votes.postComments[postCommentId] != 0){
+
+              try {
+                if(userSnapshot.val().votes.postComments[postCommentId] == 1 || userSnapshot.val().votes.postComments[postCommentId] == -1){
+                  console.log("it comes != 0");
                   userVote[userVoteKey] = 0;
                 }else {
+                  console.log("it is not -1 or 1");
                   userVote[userVoteKey] = vote;
                 }
+              } catch(err) {
+                userVote[userVoteKey] = vote;
+                console.log("error");
               }
               database.ref("users/" + userId).update(userVote, function(error) {
                 if (error) {
@@ -404,3 +420,5 @@ exports.postPostCommentVote = function(req, res) {
     }
   });
 };
+
+
