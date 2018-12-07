@@ -289,7 +289,7 @@ exports.postPostVote = function(req, res) {
     if (userSnapshot.exists()) {
       database.ref("posts").child(postId).once("value").then(function(snapshot) {
         if (snapshot.exists()) {
-          if (userSnapshot.val().votes !== undefined && userSnapshot.val().votes.posts[postId] == vote) {
+          if (userSnapshot.val().votes !== undefined && userSnapshot.val().votes.posts !== undefined && userSnapshot.val().votes.posts[postId] == vote) {
             res.status(400).send({ error: "Already voted" });
             return;
           }
@@ -345,7 +345,7 @@ exports.postPostCommentVote = function(req, res) {
     if (userSnapshot.exists()) {
       database.ref("postComments").child(postCommentId).once("value").then(function(snapshot) {
         if (snapshot.exists()) {
-          if (userSnapshot.val().votes !== undefined && userSnapshot.val().votes.postComments[postCommentId] == vote) {
+          if (userSnapshot.val().votes !== undefined && userSnapshot.val().votes.postComments !== undefined && userSnapshot.val().votes.postComments[postCommentId] == vote) {
             res.status(400).send({ error: "Already voted" });
             return;
           }
