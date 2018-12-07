@@ -14,7 +14,7 @@ exports.getMeetups = function(req, res) {
   var ref = database.ref("meetups");
   let currTime = Math.floor(Date.now() / 1000);
   if (endAt === undefined) {
-    ref.orderByChild("startTime").startAt(currTime).limitToLast(20).once("value", function(snapshot) {
+    ref.orderByChild("endTime").startAt(currTime).limitToLast(20).once("value", function(snapshot) {
       if (snapshot.exists()) {
         let response = snapshot.val();
         var meetups = [];

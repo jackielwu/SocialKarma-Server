@@ -22,7 +22,7 @@ function calcGeo (lat, lng) {
 }
 
 exports.geo = async function(req, res) {
-    var { lat, lng } = req. query;
+    var { lat, lng } = req.query;
     //40.424305, -86.913188
     var g = await calcGeo(lat, lng);
     if (g) {
@@ -41,7 +41,7 @@ exports.geo = async function(req, res) {
  *  sortby parameter - 0 = latest
  */
 exports.getPosts = function(req, res) {
-    var { geolocation, sortby } = req.query;
+    var { geolocation, sortby, showOnMap } = req.query;
     if (geolocation === undefined) {
         return res.status(400).send({ error: "Required parameters to query posts are missing."});
     } else {
@@ -52,19 +52,24 @@ exports.getPosts = function(req, res) {
               var posts = [];
               //upvoteCount -> votes
               Object.keys(response).forEach(function(key, index) {
-                var obj = {
-                  postId: key,
-                  title: response[key].title,
-                  author: response[key].author,
-                  authorName: response[key].authorName,
-                  content: response[key].content,
-                  votes: response[key].votes,
-                  timestamp: response[key].timestamp,
-                };
-                if (response[key].comments) {
-                  obj.commentCount = Object.keys(response[key].comments).length;
+                if (!showOnMap || (showOnMap && response[key].coordinates)) {
+                  var obj = {
+                    postId: key,
+                    title: response[key].title,
+                    author: response[key].author,
+                    authorName: response[key].authorName,
+                    content: response[key].content,
+                    votes: response[key].votes,
+                    timestamp: response[key].timestamp,
+                  };
+                  if (response[key].comments) {
+                    obj.commentCount = Object.keys(response[key].comments).length;
+                  }
+                  if (response[key].coordinates) {
+                    obj.coordinates = response[key].coordinates;
+                  }
+                  posts.push(obj);
                 }
-                posts.push(obj);
               });
               if (sortby !== undefined) {
                 if (sortby == 0) {
@@ -129,7 +134,7 @@ exports.getPostComments = function(req, res) {
  * Create new post
  */
 exports.postNewPost = function(req, res) {
-    var { location, author, content, title } = req.body;
+    var { location, author, content, title, showOnMap } = req.body;
     if (location === undefined || author === undefined || content === undefined || title === undefined) {
         return res.status(400).send({ error: "Required parameters to create a new post are missing."} );
     } else if (location["lat"] === undefined || location["lng"] === undefined) {
@@ -152,8 +157,11 @@ exports.postNewPost = function(req, res) {
                   content: content,
                   votes: 0,
                   commentCount: 0,
-                  timestamp: timestamp
+                  timestamp: timestamp,
               };
+              if (showOnMap) {
+                newPost.coordinates = location
+              }
               var newPostRef = database.ref("posts").push();
               var newPostKey = newPostRef.key;
               newPostRef.set(newPost, function(error) {
@@ -171,6 +179,39 @@ exports.postNewPost = function(req, res) {
             return res.status(400).send({ error: "User does not exist." });
         }
     });
+};
+
+exports.postDeletePost = function(req, res) {
+  var { userId, postId } = req.body;
+  database.ref("users").child(userId).once("value").then(function(userSnapshot) {
+    if (userSnapshot.exists()) {
+      database.ref("posts").child(postId).once("value", function(snapshot) {
+        if (snapshot.exists()) {
+          //delete post
+          database.ref("posts").child(postId).remove();
+          //search comments
+          database.ref("postComments").orderByChild("postId").equalTo(postId).once("value", function(snapshot) {
+            snapshot.forEach(function(data) {
+              console.log(data.key);
+              //delete comments from users
+              var commentUser = data.child("author").val();
+              database.ref("users").child(commentUser).child("comments").child(data.key).remove();
+              //delete comments
+              database.ref("postComments").child(data.key).remove();
+            });
+          });
+          //delete post from user
+          //userSnapshot.child("posts").child(postId).remove();
+          database.ref("users").child(userId).child("posts").child(postId).remove();
+          res.status(200).send({ message: "success" });
+        } else {
+          res.status(400).send({ error: "Post does not exist." });
+        }
+      });
+    } else {
+      res.status(400).send({ error: "User does not exist."});
+    }
+  });
 };
 
 exports.postPostComment = function(req, res) {
@@ -212,6 +253,30 @@ exports.postPostComment = function(req, res) {
       });
     } else {
       res.status(400).send({ error: "User does not exist." });
+    }
+  });
+};
+
+exports.postDeleteComment = function(req, res) {
+  var { userId, postCommentId } = req.body;
+  database.ref("users").child(userId).once("value").then(function(userSnapshot) {
+    if (userSnapshot.exists()) {
+      database.ref("postComments").child(postCommentId).once("value").then(function(snapshot) {
+        if (snapshot.exists()) {
+          //delete comment from post
+          var postId = snapshot.child("postId").val();
+          database.ref("posts").child(postId).child("comments").child(postCommentId).remove();
+          //delete comment from user
+          database.ref("users").child(userId).child("comments").child(postCommentId).remove();
+          //delete comment
+          database.ref("postComments").child(postCommentId).remove();
+          res.status(200).send({ message: "success" });
+        } else {
+          res.status(400).send({ error: "Comment does not exist." });
+        }
+      });
+    } else {
+      res.status(400).send({ error: "User does not exist."});
     }
   });
 };
