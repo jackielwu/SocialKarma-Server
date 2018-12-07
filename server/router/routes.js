@@ -13,10 +13,8 @@ module.exports = function(app) {
   /* Meetup endpoints */
   // GET
   app.get('/meetups', meetupController.getMeetups);
-  app.get('/meetup', meetupController.getMeetupDetail);
   app.get('/meetup/comments', meetupController.getMeetupComments);
   app.get('/meetup/comments/:meetupId', meetupController.getMeetupComments);
-  app.get('/meetup/:meetupId', meetupController.getMeetupDetail);
 
 
   // POST
@@ -25,6 +23,7 @@ module.exports = function(app) {
   app.post('/meetup/comment/reaction', meetupController.postMeetupCommentReaction);
   app.post('/meetup/comment', meetupController.postMeetupComment);
   app.post('/meetup', meetupController.postNewMeetup);
+  app.post('/meetupDetail', meetupController.getMeetupDetail);
 
 
   /* Posts endpoints */

@@ -1,6 +1,7 @@
 var path = require('path');
 var firebase = require('../config/fire');
 var database = firebase.database();
+var postsController = require('./postsController');
 
 /* GET */
 
@@ -10,73 +11,78 @@ var database = firebase.database();
   Default limit to 20 meetups per call
 */
 exports.getMeetups = function(req, res) {
-  var { endAt, userId } = req.query;
-  var ref = database.ref("meetups");
-  let currTime = Math.floor(Date.now() / 1000);
-  if (endAt === undefined) {
-    ref.orderByChild("endTime").startAt(currTime).limitToLast(20).once("value", function(snapshot) {
-      if (snapshot.exists()) {
-        let response = snapshot.val();
-        var meetups = [];
-        Object.keys(response).forEach(function(key, index) {
-          var obj = {
-            meetupId: key,
-            title: response[key].title,
-            startTime: response[key].startTime,
-            endTime: response[key].endTime,
-            location: response[key].location,
-            organizer: response[key].organizer,
-            organizerName: response[key].organizerName,
-          };
-          if (response[key].shortDescription != undefined) {
-            obj.shortDescription = response[key].shortDescription;
-          }
-          if (userId != undefined) {
-            Object.keys(response[key].usersAttending).forEach(function(key, index) {
-              if (key === userId) {
-                obj.attending = true;
-              }
-            });
-          }
-          meetups.push(obj);
-        });
-        res.status(200).send(meetups);
-      } else {
-        res.status(500).send({ error: "Internal Server Error: Could not get meetups."});
-      }
-    });
+  var { endAt, userId, geolocation } = req.query;
+  if (geolocation === undefined) {
+      return res.status(400).send({ error: "Required parameters to query posts are missing."});
   } else {
-    ref.orderByChild("startTime").startAt(currTime).endAt(parseInt(endAt)).limitToLast(20).once("value", function(snapshot) {
-      if (snapshot.exists()) {
-        let response = snapshot.val();
-        var meetups = [];
-        Object.keys(response).forEach(function(key, index) {
-          var obj = {
-            meetupId: key,
-            title: response[key].title,
-            startTime: response[key].startTime,
-            endTime: response[key].endTime,
-            location: response[key].location,
-            organizer: response[key].organizer,
-            organizerName: response[key].organizerName,
-          };
-          if (response[key].shortDescription != undefined) {
-            obj.shortDescription = response[key].shortDescription;
-          }
-          if (userId != undefined) {
-            Object.keys(response[key].usersAttending).forEach(function(key, index) {
-              if (key === userId) {
-                obj.attending = true;
-              }
-            });
-          }
-          meetups.push(obj);
-        });
-        res.status(200).send(meetups);
-      } else {
-        res.status(400).send({ error: "Invalid endAt time."});
-      }
-    });
+    var ref = database.ref("meetups/" + geolocation);
+    let currTime = Math.floor(Date.now() / 1000);
+    if (endAt === undefined) {
+      ref.orderByChild("endTime").startAt(currTime).limitToLast(20).once("value", function(snapshot) {
+        if (snapshot.exists()) {
+          let response = snapshot.val();
+          var meetups = [];
+          Object.keys(response).forEach(function(key, index) {
+            var obj = {
+              meetupId: key,
+              title: response[key].title,
+              startTime: response[key].startTime,
+              endTime: response[key].endTime,
+              location: response[key].location,
+              organizer: response[key].organizer,
+              organizerName: response[key].organizerName,
+              geolocation: geolocation
+            };
+            if (response[key].shortDescription != undefined) {
+              obj.shortDescription = response[key].shortDescription;
+            }
+            if (userId != undefined) {
+              Object.keys(response[key].usersAttending).forEach(function(key, index) {
+                if (key === userId) {
+                  obj.attending = true;
+                }
+              });
+            }
+            meetups.push(obj);
+          });
+          res.status(200).send(meetups);
+        } else {
+          res.status(200).send([]);
+        }
+      });
+    } else {
+      ref.orderByChild("endTime").startAt(currTime).endAt(parseInt(endAt)).limitToLast(20).once("value", function(snapshot) {
+        if (snapshot.exists()) {
+          let response = snapshot.val();
+          var meetups = [];
+          Object.keys(response).forEach(function(key, index) {
+            var obj = {
+              meetupId: key,
+              title: response[key].title,
+              startTime: response[key].startTime,
+              endTime: response[key].endTime,
+              location: response[key].location,
+              organizer: response[key].organizer,
+              organizerName: response[key].organizerName,
+            };
+            if (response[key].shortDescription != undefined) {
+              obj.shortDescription = response[key].shortDescription;
+            }
+            if (userId != undefined) {
+              Object.keys(response[key].usersAttending).forEach(function(key, index) {
+                if (key === userId) {
+                  obj.attending = true;
+                }
+              });
+            }
+            meetups.push(obj);
+          });
+          res.status(200).send(meetups);
+        } else {
+          res.status(400).send({ error: "Invalid endAt time."});
+        }
+      });
+    }
   }
 }
 
@@ -84,9 +90,9 @@ exports.getMeetups = function(req, res) {
   Get detail for a specific meetup
 */
 exports.getMeetupDetail = function(req, res) {
-  var { meetupId } = req.params;
+  var { geolocation, meetupId } = req.body;
   var { userId } = req.query;
-  var ref = database.ref("meetups");
+  var ref = database.ref("meetups/" + geolocation);
   ref.child(meetupId).once("value", function(snapshot) {
     if (snapshot.exists()) {
       var promises = [];
@@ -164,31 +170,36 @@ exports.postNewMeetup = function(req, res) {
   }
   database.ref("users").child(organizer).once("value", function(snapshot) {
     if (snapshot.exists()) {
-      var newMeetup = {
-        "title": title,
-        "startTime": startTime,
-        "endTime": endTime,
-        "location": location,
-        "organizer": organizer,
-        "organizerName": snapshot.val().username,
-      }
-      newMeetup["usersAttending"] = {};
-      newMeetup["usersAttending"][organizer] = true;
-      var { description } = req.body;
-      if (description != undefined) {
-        newMeetup.description = description;
-        newMeetup.shortDescription = description.substring(0, 100);
-      }
-      var meetupRef = database.ref("meetups").push();
-      meetupRef.set(newMeetup, function(error) {
-        if (error) {
-          res.status(500).send({ error: "Internal server error: Meetup could not be created."});
-        } else {
-          var meetupObj = {};
-          meetupObj[meetupRef.key] = true;
-          database.ref("users").child(organizer + "/meetupsAttending").update(meetupObj);
-          res.status(200).send({ message: "success" });
+      postsController.calcGeo(location["coordinates"]["lat"], location["coordinates"]["lng"]).then(function(geolocation) {
+        if (!geolocation) {
+          return res.status(400).send({ error: "The requested location is not currently provided" });
         }
+        var newMeetup = {
+          "title": title,
+          "startTime": startTime,
+          "endTime": endTime,
+          "location": location,
+          "organizer": organizer,
+          "organizerName": snapshot.val().username,
+        }
+        newMeetup["usersAttending"] = {};
+        newMeetup["usersAttending"][organizer] = true;
+        var { description } = req.body;
+        if (description != undefined) {
+          newMeetup.description = description;
+          newMeetup.shortDescription = description.substring(0, 100);
+        }
+        var meetupRef = database.ref("meetups/" + geolocation).push();
+        meetupRef.set(newMeetup, function(error) {
+          if (error) {
+            res.status(500).send({ error: "Internal server error: Meetup could not be created."});
+          } else {
+            var meetupObj = {};
+            meetupObj[meetupRef.key] = true;
+            database.ref("users").child(organizer + "/meetupsAttending").update(meetupObj);
+            res.status(200).send({ message: "success" });
+          }
+        });
       });
     } else {
       res.status(400).send({ error: "User does not exist." });
@@ -200,15 +211,15 @@ exports.postNewMeetup = function(req, res) {
   RSVP to a specific meetup
 */
 exports.postRsvpMeetup = function(req, res) {
-  var { userId, meetupId } = req.body;
+  var { userId, meetupId, geolocation } = req.body;
   database.ref("users").child(userId).once("value", function(userSnapshot) {
     if (userSnapshot.exists()) {
-      database.ref("meetups").child(meetupId).once("value", function(snapshot) {
+      database.ref("meetups/" + geolocation).child(meetupId).once("value", function(snapshot) {
         if (snapshot.exists()) {
           if (snapshot.hasChild("usersAttending")) {
             var userAttending = {};
             userAttending[userId] = true;
-            database.ref("meetups").child(meetupId + "/usersAttending").update(userAttending, function(error) {
+            database.ref("meetups/" + geolocation).child(meetupId + "/usersAttending").update(userAttending, function(error) {
               if (error) {
                 res.status(500).send({ error: "Internal server error: Could not RSVP to meetup." });
               } else {
@@ -221,7 +232,7 @@ exports.postRsvpMeetup = function(req, res) {
           } else {
             var userAttending = { "usersAttending": {} };
             userAttending["usersAttending"][userId] = true;
-            database.ref("meetups").child(meetupId).update(userAttending, function(error) {
+            database.ref("meetups/" + geolocation).child(meetupId).update(userAttending, function(error) {
               if (error) {
                 res.status(500).send({ error: "Internal server error: Could not RSVP to meetup." });
               } else {
