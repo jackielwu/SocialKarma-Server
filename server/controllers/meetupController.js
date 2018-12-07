@@ -31,6 +31,7 @@ exports.getMeetups = function(req, res) {
               location: response[key].location,
               organizer: response[key].organizer,
               organizerName: response[key].organizerName,
+              geolocation: geolocation
             };
             if (response[key].shortDescription != undefined) {
               obj.shortDescription = response[key].shortDescription;
@@ -89,9 +90,9 @@ exports.getMeetups = function(req, res) {
   Get detail for a specific meetup
 */
 exports.getMeetupDetail = function(req, res) {
-  var { meetupId } = req.body;
+  var { geolocation, meetupId } = req.body;
   var { userId } = req.query;
-  var ref = database.ref("meetups");
+  var ref = database.ref("meetups/" + geolocation);
   ref.child(meetupId).once("value", function(snapshot) {
     if (snapshot.exists()) {
       var promises = [];
