@@ -222,11 +222,12 @@ exports.postPostVote = function(req, res) {
     if (userSnapshot.exists()) {
       database.ref("posts").child(postId).once("value").then(function(snapshot) {
         if (snapshot.exists()) {
-          if (userSnapshot.val().votes !== undefined && userSnapshot.val().votes.posts[postId] == vote) {
+          if (userSnapshot.val().votes !== undefined && userSnapshot.val().votes.posts !== undefined && ( userSnapshot.val().votes.posts[postId] == vote )  ) {
             res.status(400).send({ error: "Already voted" });
             return;
           }
           var newVote = vote == 0 ? -(userSnapshot.val().votes.posts[postId]) : vote;
+          
           database.ref("posts").child(postId).update({
             "votes" : snapshot.val().votes + newVote
           }, function(error) {
@@ -235,7 +236,11 @@ exports.postPostVote = function(req, res) {
             } else {
               const userVoteKey = "votes/posts/" + postId;
               var userVote = {};
-              userVote[userVoteKey] = vote;
+              if(userSnapshot.val().votes.posts[postId] != 0){
+                userVote[userVoteKey] = 0;
+              }else {
+                userVote[userVoteKey] = vote;
+              }
               database.ref("users/" + userId).update(userVote, function(error) {
                 if (error) {
                   res.status(500).send({ error: "Internal server error: Could not create vote for post." });
@@ -278,7 +283,7 @@ exports.postPostCommentVote = function(req, res) {
     if (userSnapshot.exists()) {
       database.ref("postComments").child(postCommentId).once("value").then(function(snapshot) {
         if (snapshot.exists()) {
-          if (userSnapshot.val().votes !== undefined && userSnapshot.val().votes.postComments[postCommentId] == vote) {
+          if (userSnapshot.val().votes !== undefined && userSnapshot.val().votes.postComments !== undefined && userSnapshot.val().votes.postComments[postCommentId] == vote) {
             res.status(400).send({ error: "Already voted" });
             return;
           }
@@ -291,7 +296,14 @@ exports.postPostCommentVote = function(req, res) {
             } else {
               const userVoteKey = "votes/postComments/" + postCommentId;
               var userVote = {};
-              userVote[userVoteKey] = vote;
+              //userVote[userVoteKey] = vote;
+              if(userSnapshot.val().votes.postComments !== undefined) {  
+                if(userSnapshot.val().votes.postComments[postCommentId] != 0){
+                  userVote[userVoteKey] = 0;
+                }else {
+                  userVote[userVoteKey] = vote;
+                }
+              }
               database.ref("users/" + userId).update(userVote, function(error) {
                 if (error) {
                   res.status(500).send({ error: "Internal server error: Could not create vote for post comment." });
